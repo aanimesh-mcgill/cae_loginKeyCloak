@@ -43,6 +43,7 @@ Before setting up the system, ensure you have the following installed:
 
 4. **Run the API:**
    ```bash
+   set ASPNETCORE_ENVIRONMENT=Development
    dotnet run
    ```
    

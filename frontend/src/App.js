@@ -5,6 +5,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
+import DocumentsListPage from './pages/DocumentsListPage';
+import DocumentDetailPage from './pages/DocumentDetailPage';
+import DocumentEditPage from './pages/DocumentEditPage';
 
 function App() {
   return (
@@ -26,6 +29,38 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="Admin">
                   <AdminPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/documents" 
+              element={
+                <ProtectedRoute>
+                  <DocumentsListPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/documents/new" 
+              element={
+                <ProtectedRoute requiredRole="Editor">
+                  <DocumentEditPage isEdit={false} />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/documents/:id" 
+              element={
+                <ProtectedRoute>
+                  <DocumentDetailPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/documents/:id/edit" 
+              element={
+                <ProtectedRoute requiredRole="Editor">
+                  <DocumentEditPage isEdit={true} />
                 </ProtectedRoute>
               } 
             />

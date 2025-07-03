@@ -13,6 +13,7 @@ namespace LoginSystem.API.Data
         public DbSet<User> Users { get; set; }
         public DbSet<LoginHistory> LoginHistories { get; set; }
         public DbSet<Content> Contents { get; set; }
+        public DbSet<Document> Documents { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -49,6 +50,13 @@ namespace LoginSystem.API.Data
                 entity.HasIndex(e => e.IsPublished);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
                 entity.Property(e => e.IsPublished).HasDefaultValue(false);
+            });
+
+            // Document configuration
+            modelBuilder.Entity<Document>(entity =>
+            {
+                entity.HasIndex(e => e.CreatedAt);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             });
 
             // Seed data for demonstration

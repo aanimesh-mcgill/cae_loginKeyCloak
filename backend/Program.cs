@@ -66,6 +66,7 @@ builder.Services.AddScoped<IActiveDirectoryService, ActiveDirectoryService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ILoginHistoryRepository, LoginHistoryRepository>();
 builder.Services.AddScoped<IContentRepository, ContentRepository>();
+builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
 
 var app = builder.Build();
 

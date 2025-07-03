@@ -101,6 +101,9 @@ const DashboardPage = () => {
       </div>
 
       <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ marginBottom: 20 }}>
+          <a href="/documents" style={{ background: '#1976d2', color: 'white', padding: '10px 20px', borderRadius: 5, textDecoration: 'none', fontWeight: 'bold' }}>Go to Documents</a>
+        </div>
         {/* User Info Card */}
         <div style={{
           backgroundColor: 'white',
