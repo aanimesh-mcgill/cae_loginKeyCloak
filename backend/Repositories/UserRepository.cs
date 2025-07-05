@@ -2,16 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using LoginSystem.API.Data;
 using LoginSystem.API.Interfaces;
 using LoginSystem.API.Models;
+using Microsoft.Extensions.Logging;
 
 namespace LoginSystem.API.Repositories
 {
     public class UserRepository : IUserRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<UserRepository> _logger;
 
-        public UserRepository(ApplicationDbContext context)
+        public UserRepository(ApplicationDbContext context, ILogger<UserRepository> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<User>> GetAllAsync()
@@ -36,13 +39,24 @@ namespace LoginSystem.API.Repositories
 
         public async Task<User> CreateAsync(User user)
         {
-            user.Id = Guid.NewGuid();
-            user.CreatedAt = DateTime.UtcNow;
-            user.IsActive = true;
+            try
+            {
+                _logger.LogInformation("Attempting to insert user into DB: {@User}", user);
+                user.Id = Guid.NewGuid();
+                user.CreatedAt = DateTime.UtcNow;
+                user.IsActive = true;
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return user;
+                _context.Users.Add(user);
+                _logger.LogInformation("EF Core Insert SQL: {Sql}", _context.Users.ToQueryString());
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("User inserted successfully: {@User}", user);
+                return user;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inserting user into DB: {@User}", user);
+                throw;
+            }
         }
 
         public async Task<User> UpdateAsync(User user)

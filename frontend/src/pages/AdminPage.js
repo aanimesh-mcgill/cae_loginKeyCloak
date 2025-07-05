@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { usersAPI } from '../services/api';
+import { usersAPI, setApiAuthToken } from '../services/api';
 
 const AdminPage = () => {
-  const { user } = useAuth();
+  const { user, token, isAuthenticated } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (!token) {
+      console.warn('[AdminPage] Token is missing, not loading users yet.');
+      return;
+    }
+    setApiAuthToken(token);
+    if (isAuthenticated) {
+      loadUsers();
+    }
+  }, [isAuthenticated, token]);
 
   const loadUsers = async () => {
     try {
@@ -30,6 +37,11 @@ const AdminPage = () => {
   };
 
   const handleUpdateUser = async (updatedUser) => {
+    if (!token) {
+      console.warn('[AdminPage] Token is missing, cannot update user!');
+      return;
+    }
+    setApiAuthToken(token);
     try {
       await usersAPI.updateUser(updatedUser.id, {
         displayName: updatedUser.displayName,
@@ -45,6 +57,11 @@ const AdminPage = () => {
   };
 
   const handleDeleteUser = async (userId) => {
+    if (!token) {
+      console.warn('[AdminPage] Token is missing, cannot delete user!');
+      return;
+    }
+    setApiAuthToken(token);
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         await usersAPI.deleteUser(userId);

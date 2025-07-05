@@ -1,19 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { documentAPI } from '../services/api';
+import { documentAPI, setApiAuthToken } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const DocumentDetailPage = () => {
   const { id } = useParams();
   const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { hasRole } = useAuth();
+  const { hasRole, token, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadDocument();
+    if (!token) {
+      console.warn('[DocumentDetailPage] Token is missing, not loading document yet.');
+      return;
+    }
+    setApiAuthToken(token);
+    if (isAuthenticated) {
+      loadDocument();
+    }
     // eslint-disable-next-line
-  }, [id]);
+  }, [id, isAuthenticated, token]);
 
   const loadDocument = async () => {
     try {
@@ -23,6 +30,18 @@ const DocumentDetailPage = () => {
       setDocument(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!token) {
+      console.warn('[DocumentDetailPage] Token is missing, cannot delete document!');
+      return;
+    }
+    setApiAuthToken(token);
+    if (window.confirm('Are you sure you want to delete this document?')) {
+      await documentAPI.deleteDocument(document.id);
+      navigate('/documents');
     }
   };
 
@@ -49,12 +68,7 @@ const DocumentDetailPage = () => {
       {hasRole('Admin') && (
         <>
           {' | '}
-          <button style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer' }} onClick={async () => {
-            if (window.confirm('Are you sure you want to delete this document?')) {
-              await documentAPI.deleteDocument(document.id);
-              navigate('/documents');
-            }
-          }}>Delete</button>
+          <button style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer' }} onClick={handleDelete}>Delete</button>
         </>
       )}
     </div>

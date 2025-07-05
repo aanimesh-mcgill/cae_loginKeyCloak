@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { documentAPI } from '../services/api';
+import { documentAPI, setApiAuthToken } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const DocumentEditPage = ({ isEdit }) => {
@@ -10,7 +10,7 @@ const DocumentEditPage = ({ isEdit }) => {
   const [loading, setLoading] = useState(isEdit);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { hasRole } = useAuth();
+  const { hasRole, token, isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (isEdit) {
@@ -34,11 +34,18 @@ const DocumentEditPage = ({ isEdit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    console.log('[DocumentEditPage] handleSubmit: token at submit time:', token);
     try {
       if (!title.trim() || !content.trim()) {
         setError('Title and content are required');
         return;
       }
+      if (!token) {
+        setError('Authentication token missing. Please log in again.');
+        console.warn('[DocumentEditPage] Token is missing, cannot update or create document!');
+        return;
+      }
+      setApiAuthToken(token);
       if (isEdit) {
         await documentAPI.updateDocument(id, { title, content });
         navigate(`/documents/${id}`);

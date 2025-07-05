@@ -6,6 +6,17 @@ const ProtectedRoute = ({ children, requiredRole, requiredPermission }) => {
   const { user, loading, hasRole, hasPermission, isAuthenticated } = useAuth();
   const location = useLocation();
 
+  console.log('ProtectedRoute:', {
+    path: location.pathname,
+    isAuthenticated,
+    user,
+    loading,
+    requiredRole,
+    hasRole: requiredRole ? hasRole(requiredRole) : undefined,
+    requiredPermission,
+    hasPermission: requiredPermission ? hasPermission(requiredPermission) : undefined
+  });
+
   if (loading) {
     return (
       <div style={{ 
@@ -21,8 +32,7 @@ const ProtectedRoute = ({ children, requiredRole, requiredPermission }) => {
   }
 
   if (!isAuthenticated) {
-    // Redirect to login page with return url
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <div>Not authenticated (debug mode, login page should be accessible)</div>;
   }
 
   if (requiredRole && !hasRole(requiredRole)) {
@@ -38,7 +48,7 @@ const ProtectedRoute = ({ children, requiredRole, requiredPermission }) => {
         <h2>Access Denied</h2>
         <p>You don't have the required role to access this page.</p>
         <p>Required role: {requiredRole}</p>
-        <p>Your role: {user?.role}</p>
+        <p>Your roles: {user?.realm_access?.roles?.join(', ')}</p>
         <button onClick={() => window.history.back()}>Go Back</button>
       </div>
     );

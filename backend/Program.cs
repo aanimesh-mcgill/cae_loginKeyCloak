@@ -5,7 +5,7 @@ using System.Text;
 using LoginSystem.API.Data;
 using LoginSystem.API.Interfaces;
 using LoginSystem.API.Repositories;
-using LoginSystem.API.Services;
+// using LoginSystem.API.Services; // JwtService registration removed if not used
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,16 +31,41 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    options.Authority = "http://localhost:8080/realms/devrealm";
+    options.Audience = "frontend";
+    options.RequireHttpsMetadata = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
         ValidateIssuer = true,
-        ValidIssuer = jwtSettings["Issuer"],
+        ValidIssuer = "http://localhost:8080/realms/devrealm",
         ValidateAudience = true,
-        ValidAudience = jwtSettings["Audience"],
-        ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
+        ValidAudience = "frontend",
+        ValidateLifetime = true
+    };
+    // Map Keycloak realm_access.roles to ClaimTypes.Role
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = context =>
+        {
+            var claimsIdentity = context.Principal.Identity as System.Security.Claims.ClaimsIdentity;
+            var realmAccessClaim = claimsIdentity?.FindFirst("realm_access");
+            if (realmAccessClaim != null)
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(realmAccessClaim.Value);
+                if (doc.RootElement.TryGetProperty("roles", out var rolesElement))
+                {
+                    foreach (var role in rolesElement.EnumerateArray())
+                    {
+                        var roleName = role.GetString();
+                        if (!string.IsNullOrEmpty(roleName))
+                        {
+                            claimsIdentity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, roleName));
+                        }
+                    }
+                }
+            }
+            return System.Threading.Tasks.Task.CompletedTask;
+        }
     };
 });
 
@@ -59,8 +84,7 @@ builder.Services.AddCors(options =>
 });
 
 // Register Services
-builder.Services.AddScoped<JwtService>();
-builder.Services.AddScoped<IActiveDirectoryService, ActiveDirectoryService>();
+// builder.Services.AddScoped<JwtService>();
 
 // Register Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();

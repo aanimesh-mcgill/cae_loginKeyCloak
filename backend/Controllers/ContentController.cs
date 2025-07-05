@@ -4,6 +4,9 @@ using System.Security.Claims;
 using LoginSystem.API.DTOs;
 using LoginSystem.API.Interfaces;
 using LoginSystem.API.Models;
+using LoginSystem.API.Utils;
+using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace LoginSystem.API.Controllers
 {
@@ -14,16 +17,22 @@ namespace LoginSystem.API.Controllers
     {
         private readonly IContentRepository _contentRepository;
         private readonly IUserRepository _userRepository;
+        private readonly ILogger<ContentController> _logger;
 
-        public ContentController(IContentRepository contentRepository, IUserRepository userRepository)
+        public ContentController(IContentRepository contentRepository, IUserRepository userRepository, ILogger<ContentController> logger)
         {
             _contentRepository = contentRepository;
             _userRepository = userRepository;
+            _logger = logger;
         }
 
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAllContent()
         {
+            // Log JWT claims for debugging
+            JwtClaimsHelper.LogAllClaims(User, _logger, "GetAllContent");
+            
             var contents = await _contentRepository.GetAllAsync();
             var contentDtos = contents.Select(MapToDto);
             return Ok(contentDtos);
@@ -58,16 +67,51 @@ namespace LoginSystem.API.Controllers
                 return BadRequest("Title and body are required");
             }
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            // Log JWT claims for debugging
+            JwtClaimsHelper.LogAllClaims(User, _logger, "CreateContent");
+
+            // Get username from JWT for audit trail
+            var username = JwtClaimsHelper.GetUsername(User);
+            if (string.IsNullOrEmpty(username))
             {
-                return Unauthorized();
+                _logger.LogWarning("Could not extract username from JWT claims");
+                return Unauthorized("Invalid user information");
             }
 
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null)
+            // Ensure user exists in database (for audit trail purposes)
+            var userId = JwtClaimsHelper.GetUserId(User);
+            if (userId.HasValue)
             {
-                return Unauthorized();
+                var user = await _userRepository.GetByIdAsync(userId.Value);
+                if (user == null)
+                {
+                    // Check by username as well
+                    user = await _userRepository.GetByAdUsernameAsync(username);
+                    if (user == null)
+                    {
+                        // Create user if not exists (for audit trail)
+                        var email = JwtClaimsHelper.GetEmail(User);
+                        var displayName = JwtClaimsHelper.GetDisplayName(User);
+                        var roles = JwtClaimsHelper.GetUserRoles(User);
+                        var highestRole = roles.Contains("Admin") ? "Admin" : 
+                                         roles.Contains("Editor") ? "Editor" : "Viewer";
+
+                        user = new User
+                        {
+                            Id = userId.Value,
+                            AdUsername = username,
+                            Email = email,
+                            DisplayName = displayName,
+                            Role = highestRole // Store for audit purposes only
+                        };
+                        await _userRepository.CreateAsync(user);
+                        _logger.LogInformation("Created new user in database for audit trail: {Username}", username);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("User already exists with username: {Username}", username);
+                    }
+                }
             }
 
             var content = new Content
@@ -75,7 +119,7 @@ namespace LoginSystem.API.Controllers
                 Title = request.Title,
                 Body = request.Body,
                 IsPublished = request.IsPublished,
-                CreatedBy = user.AdUsername
+                CreatedBy = username // Use JWT username directly
             };
 
             await _contentRepository.CreateAsync(content);
@@ -93,22 +137,21 @@ namespace LoginSystem.API.Controllers
                 return NotFound("Content not found");
             }
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
-            {
-                return Unauthorized();
-            }
+            // Log JWT claims for debugging
+            JwtClaimsHelper.LogAllClaims(User, _logger, "UpdateContent");
 
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null)
+            // Get username from JWT for audit trail
+            var username = JwtClaimsHelper.GetUsername(User);
+            if (string.IsNullOrEmpty(username))
             {
-                return Unauthorized();
+                _logger.LogWarning("Could not extract username from JWT claims");
+                return Unauthorized("Invalid user information");
             }
 
             content.Title = request.Title;
             content.Body = request.Body;
             content.IsPublished = request.IsPublished;
-            content.UpdatedBy = user.AdUsername;
+            content.UpdatedBy = username; // Use JWT username directly
 
             await _contentRepository.UpdateAsync(content);
 

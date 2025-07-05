@@ -1,24 +1,47 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { documentAPI } from '../services/api';
+import { documentAPI, setApiAuthToken } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 const DocumentsListPage = () => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { hasRole } = useAuth();
+  const { hasRole, isAuthenticated, token } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadDocuments();
-  }, []);
+    console.log('[DocumentsListPage] useEffect fired', { isAuthenticated, token });
+    if (!token) {
+      console.warn('[DocumentsListPage] WARNING: Token is missing before API call!');
+      return;
+    }
+    setApiAuthToken(token); // Ensure Axios always has the latest token
+    if (isAuthenticated) {
+      console.log('[DocumentsListPage] User is authenticated, loading documents...');
+      loadDocuments();
+    } else {
+      console.log('[DocumentsListPage] User is NOT authenticated, skipping document load.');
+      setLoading(false);
+    }
+  }, [isAuthenticated, token]);
 
   const loadDocuments = async () => {
     try {
+      setLoading(true);
+      setDocuments([]);
+      console.log('[DocumentsListPage] Calling documentAPI.getAllDocuments...');
       const data = await documentAPI.getAllDocuments();
+      console.log('[DocumentsListPage] Documents fetched:', data);
       setDocuments(data);
     } catch (error) {
-      // handle error
+      console.error('[DocumentsListPage] Error fetching documents:', error, error?.response);
+      if (error?.response) {
+        console.error('[DocumentsListPage] API error details:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      }
     } finally {
       setLoading(false);
     }

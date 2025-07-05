@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -8,8 +8,17 @@ import AdminPage from './pages/AdminPage';
 import DocumentsListPage from './pages/DocumentsListPage';
 import DocumentDetailPage from './pages/DocumentDetailPage';
 import DocumentEditPage from './pages/DocumentEditPage';
+import TestPage from './pages/TestPage';
+import { useKeycloak } from '@react-keycloak/web';
+import { setApiAuthToken } from './services/api';
 
 function App() {
+  const { keycloak } = useKeycloak();
+
+  useEffect(() => {
+    setApiAuthToken(keycloak?.token);
+  }, [keycloak?.token]);
+
   return (
     <AuthProvider>
       <Router>
@@ -64,7 +73,15 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route 
+              path="/test" 
+              element={
+                <ProtectedRoute>
+                  <TestPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </div>
       </Router>

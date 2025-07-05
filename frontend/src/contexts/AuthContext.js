@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import React, { createContext, useContext } from 'react';
+import { useKeycloak } from '@react-keycloak/web';
+import { setApiAuthToken } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -12,87 +13,64 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { keycloak, initialized } = useKeycloak();
 
-  // Check if user is authenticated on app load
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      authAPI.getCurrentUser()
-        .then(data => {
-          setUser(data.user);
-        })
-        .catch(err => {
-          console.error('Failed to get current user:', err);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+  // Parse user info and roles from Keycloak token
+  const user = keycloak?.tokenParsed || null;
+  const loading = !initialized;
+  const isAuthenticated = !!keycloak?.authenticated;
+
+  React.useEffect(() => {
+    if (isAuthenticated && keycloak?.token) {
+      setApiAuthToken(keycloak.token);
+      console.log('AuthContext: Set API auth token', keycloak.token);
     } else {
-      setLoading(false);
+      setApiAuthToken(null);
+      console.log('AuthContext: Cleared API auth token');
     }
-  }, []);
+  }, [isAuthenticated, keycloak?.token]);
 
-  const login = async (username, password) => {
-    try {
-      setError(null);
-      const response = await authAPI.login(username, password);
-      
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      setUser(response.user);
-      
-      return { success: true };
-    } catch (err) {
-      const errorMessage = err.response?.data || 'Login failed';
-      setError(errorMessage);
-      return { success: false, error: errorMessage };
-    }
-  };
+  console.log('AuthContext:', {
+    keycloak,
+    keycloakAuthenticated: keycloak?.authenticated,
+    tokenParsed: keycloak?.tokenParsed,
+    user,
+    loading,
+    isAuthenticated
+  });
 
-  const logout = async () => {
-    try {
-      await authAPI.logout();
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-      setError(null);
-    }
-  };
+  // Keycloak roles are in realm_access.roles or resource_access[client].roles
+  const roles = user?.realm_access?.roles || [];
 
+  const hasRole = (role) => roles.includes(role);
+
+  // Permissions can be mapped to roles or custom claims as needed
   const hasPermission = (permission) => {
-    if (!user) return false;
-    
+    // Example: map permissions to roles
     const permissions = {
       'Admin': ['content:read', 'content:create', 'content:update', 'content:delete', 'users:read', 'users:update', 'users:delete', 'system:admin'],
       'Editor': ['content:read', 'content:create', 'content:update'],
       'Viewer': ['content:read']
     };
-    
-    return permissions[user.role]?.includes(permission) || false;
+    for (const role of roles) {
+      if (permissions[role]?.includes(permission)) return true;
+    }
+    return false;
   };
 
-  const hasRole = (role) => {
-    if (!user) return false;
-    return user.role === role;
-  };
+  const login = () => keycloak?.login();
+  const logout = () => keycloak?.logout();
 
   const value = {
     user,
     loading,
-    error,
+    error: null,
     login,
     logout,
     hasPermission,
     hasRole,
-    isAuthenticated: !!user
+    isAuthenticated,
+    token: keycloak?.token
   };
 
   return (

@@ -2,16 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using LoginSystem.API.Data;
 using LoginSystem.API.Interfaces;
 using LoginSystem.API.Models;
+using Microsoft.Extensions.Logging;
 
 namespace LoginSystem.API.Repositories
 {
     public class DocumentRepository : IDocumentRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<DocumentRepository> _logger;
 
-        public DocumentRepository(ApplicationDbContext context)
+        public DocumentRepository(ApplicationDbContext context, ILogger<DocumentRepository> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<Document>> GetAllAsync()
@@ -38,9 +41,12 @@ namespace LoginSystem.API.Repositories
 
         public async Task<Document> UpdateAsync(Document document)
         {
+            _logger.LogInformation("[DocumentRepository] Updating document: Id={Id}, Title={Title}, Content={Content}", document.Id, document.Title, document.Content);
             document.UpdatedAt = DateTime.UtcNow;
             _context.Documents.Update(document);
-            await _context.SaveChangesAsync();
+            var result = await _context.SaveChangesAsync();
+            _logger.LogInformation("[DocumentRepository] SaveChangesAsync result: {Result}", result);
+            _logger.LogInformation("[DocumentRepository] Updated document: Id={Id}, Title={Title}, Content={Content}", document.Id, document.Title, document.Content);
             return document;
         }
 

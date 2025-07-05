@@ -136,3 +136,4 @@ C:\Users\aanime\cae_login\backend\obj\Debug\net9.0\refint\LoginSystem.API.dll
 C:\Users\aanime\cae_login\backend\obj\Debug\net9.0\LoginSystem.API.pdb
 C:\Users\aanime\cae_login\backend\obj\Debug\net9.0\LoginSystem.API.genruntimeconfig.cache
 C:\Users\aanime\cae_login\backend\obj\Debug\net9.0\ref\LoginSystem.API.dll
+C:\Users\aanime\cae_login\backend\bin\Debug\net9.0\appsettings.Development.json
