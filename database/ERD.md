@@ -8,18 +8,18 @@ This document contains the Entity Relationship Diagram (ERD) for the Keycloak Lo
 ```mermaid
 erDiagram
     User {
-        GUID Id PK
-        string AdUsername UNIQUE
+        string Id PK
+        string AdUsername UK
         string Email
         string DisplayName
         string Role
-        bool IsActive
+        boolean IsActive
         datetime CreatedAt
         datetime UpdatedAt
         datetime LastLogin
     }
     Document {
-        GUID Id PK
+        string Id PK
         string Title
         string Content
         string CreatedBy
@@ -28,17 +28,17 @@ erDiagram
         datetime UpdatedAt
     }
     Content {
-        GUID Id PK
+        string Id PK
         string Title
         string Body
-        bool IsPublished
+        boolean IsPublished
         string CreatedBy
         datetime CreatedAt
         string UpdatedBy
         datetime UpdatedAt
     }
-    User ||--o{ Document : creates
-    User ||--o{ Content : creates
+    User ||--o{ Document : "creates"
+    User ||--o{ Content : "creates"
 ```
 
 ## Entity Descriptions
